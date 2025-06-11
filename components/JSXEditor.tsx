@@ -1,20 +1,15 @@
 "use client";
-
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import * as Babel from "@babel/standalone";
-
-// Helper to beautify code (optional, use prettier/standalone if needed)
 function beautify(code: string) {
   return code.replace(/({|;)/g, "$1\n").replace(/\n\s*\n/g, "\n").replace(/^\s+/gm, "  ");
 }
-
 type ProjectFiles = { [filename: string]: string };
-
 const EXAMPLES: { [name: string]: ProjectFiles } = {
   "Counter": {
     "App.jsx": `function App() {
@@ -59,17 +54,13 @@ export function greet(name) {
 }`,
   }
 };
-
 const DEFAULT_FILES: ProjectFiles = {
   "App.jsx": `function App() {
   return <h1>Hello JSX!</h1>;
 }`,
 };
-
 const LOCAL_KEY = "jsxeditor_project_v2";
-
 export default function JSXEditor() {
-  // Multi-file state
   const [files, setFiles] = useState<ProjectFiles>(() => {
     if (typeof window === "undefined") return DEFAULT_FILES;
     try {
@@ -85,35 +76,22 @@ export default function JSXEditor() {
   const [error, setError] = useState<string | null>(null);
   const [consoleLogs, setConsoleLogs] = useState<string[]>([]);
   const [autoRun, setAutoRun] = useState<boolean>(true);
-
-  // Project save/load
   useEffect(() => {
     if (typeof window !== "undefined")
       window.localStorage.setItem(LOCAL_KEY, JSON.stringify(files));
   }, [files]);
-
-  // Compile on file/code change
   useEffect(() => {
     if (autoRun) compile();
-    // eslint-disable-next-line
   }, [files, activeFile, autoRun]);
-
-  // Multi-file Babel compile
   function compile() {
-    // Reset error and logs
     setError(null);
     setConsoleLogs([]);
     try {
-      // Babel: Concatenate all files, but App.jsx is always last (entry)
       const fileOrder = Object.keys(files).filter(f => f !== "App.jsx").concat("App.jsx");
       let userCode = fileOrder.map(f => files[f]).join("\n\n");
-
-      // Entry point
       const entry = `
         ReactDOM.createRoot(document.getElementById('root')).render(<App />);
       `;
-
-      // Custom console bridge
       const consoleBridge = `
         window.parent.postMessage(
           { source: "iframe-console", logs: [].slice.call(arguments).map(String).join(" ") },
@@ -129,12 +107,10 @@ export default function JSXEditor() {
           }
         })();
       `;
-
       const result = Babel.transform(
         hijackConsole + "\n" + userCode + "\n" + entry,
         { presets: ["react"] }
       ).code;
-
       const html = `
         <!DOCTYPE html>
         <html>
@@ -162,8 +138,6 @@ export default function JSXEditor() {
       setError(e?.message || String(e));
     }
   }
-
-  // Receive console logs from iframe
   useEffect(() => {
     function handler(e: MessageEvent) {
       if (e.data?.source === "iframe-console" && typeof e.data.logs === "string") {
@@ -173,8 +147,6 @@ export default function JSXEditor() {
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
   }, []);
-
-  // File ops
   function handleFileChange(val: string) {
     setFiles(f => ({ ...f, [activeFile]: val }));
   }
@@ -226,8 +198,6 @@ export default function JSXEditor() {
     window.URL.revokeObjectURL(url);
     a.remove();
   }
-
-  // Save/load project
   function saveProject() {
     window.localStorage.setItem(LOCAL_KEY, JSON.stringify(files));
     alert("Project saved!");
@@ -240,23 +210,16 @@ export default function JSXEditor() {
   function clearProject() {
     if (confirm("Reset all files to default?")) setFiles(DEFAULT_FILES);
   }
-
-  // Examples
   function handleExample(name: string) {
     setFiles(EXAMPLES[name]);
     setActiveFile("App.jsx");
   }
-
-  // Beautify
   function handleBeautify() {
     setFiles(f => ({ ...f, [activeFile]: beautify(f[activeFile]) }));
   }
-
-  // Manual run
   function handleRun() {
     compile();
   }
-
   return (
     <main className="p-4 max-w-6xl mx-auto w-full">
       <Tabs defaultValue="editor" className="w-full">
@@ -267,8 +230,6 @@ export default function JSXEditor() {
           <TabsTrigger value="project">Project</TabsTrigger>
           <TabsTrigger value="examples">Examples</TabsTrigger>
         </TabsList>
-
-        {/* Editor Tab */}
         <TabsContent value="editor">
           <Card className="rounded-2xl shadow-lg overflow-hidden">
             <CardContent className="p-4">
@@ -320,8 +281,6 @@ export default function JSXEditor() {
             </CardContent>
           </Card>
         </TabsContent>
-
-        {/* Preview Tab */}
         <TabsContent value="preview">
           <Card className="rounded-2xl shadow-lg overflow-hidden">
             <CardContent className="p-0 h-[500px]">
@@ -334,8 +293,6 @@ export default function JSXEditor() {
             </CardContent>
           </Card>
         </TabsContent>
-
-        {/* Console Tab */}
         <TabsContent value="console">
           <Card className="rounded-2xl shadow-lg">
             <CardContent className="p-4">
@@ -356,8 +313,6 @@ export default function JSXEditor() {
             </CardContent>
           </Card>
         </TabsContent>
-
-        {/* Project Tab */}
         <TabsContent value="project">
           <Card className="rounded-2xl shadow-lg">
             <CardContent className="p-4 space-y-4">
@@ -370,8 +325,6 @@ export default function JSXEditor() {
             </CardContent>
           </Card>
         </TabsContent>
-
-        {/* Examples Tab */}
         <TabsContent value="examples">
           <Card className="rounded-2xl shadow-lg">
             <CardContent className="p-4">
@@ -391,4 +344,4 @@ export default function JSXEditor() {
       </Tabs>
     </main>
   );
-  }
+}
